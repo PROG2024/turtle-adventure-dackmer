@@ -4,6 +4,7 @@ adventure game.
 """
 from turtle import RawTurtle
 from gamelib import Game, GameElement
+import random
 
 
 class TurtleGameElement(GameElement):
@@ -171,6 +172,14 @@ class Player(TurtleGameElement):
         # check if player has arrived home
         if self.game.home.contains(self.x, self.y):
             self.game.game_over_win()
+
+            # Check for collisions with enemies
+        for enemy in self.game.enemies:
+            if enemy.hits_player():
+                self.game.game_over_lose()
+                return  # If collision detected, stop further processing
+
+            # If no collision, move towards waypoint
         turtle = self.__turtle
         waypoint = self.game.waypoint
         if self.game.waypoint.is_active:
@@ -291,7 +300,7 @@ class EnemyGenerator:
         self.__level: int = level
 
         # example
-        self.__game.after(100, self.create_enemy)
+        self.__game.after(1000, self.create_random_walk_enemy)
 
     @property
     def game(self) -> "TurtleAdventureGame":
@@ -315,6 +324,17 @@ class EnemyGenerator:
         new_enemy.x = 100
         new_enemy.y = 100
         self.game.add_element(new_enemy)
+
+    def create_random_walk_enemy(self) -> None:
+        """
+        Create a RandomWalkEnemy
+        """
+        new_enemy = RandomWalkEnemy(self.__game, size=20, color="blue")
+        new_enemy.x = random.randint(50, self.__game.screen_width - 50)
+        new_enemy.y = random.randint(50, self.__game.screen_height - 50)
+        self.__game.add_element(new_enemy)
+        # Schedule the next enemy creation after 2000 ms
+        self.__game.after(2000, self.create_random_walk_enemy)
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
@@ -383,3 +403,93 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
                                 text="You Lose",
                                 font=font,
                                 fill="red")
+
+class RandomWalkEnemy(Enemy):
+    """
+    Enemy that moves randomly on the screen
+    """
+
+    def create(self) -> None:
+        # Create the enemy visualization
+        self.__id = self.canvas.create_rectangle(0, 0, 0, 0, outline="blue", width=2)
+
+    def delete(self) -> None:
+        # Delete the enemy visualization
+        self.canvas.delete(self.__id)
+
+    def update(self) -> None:
+        # Move the enemy randomly
+        dx = random.choice([-1, 0, 1])
+        dy = random.choice([-1, 0, 1])
+        self.x += dx
+        self.y += dy
+
+    def render(self) -> None:
+        # Render the enemy visualization
+        self.canvas.coords(self.__id, self.x - self.size/2, self.y - self.size/2, self.x + self.size/2, self.y + self.size/2)
+
+
+class ChasingEnemy(Enemy):
+    """
+    Enemy that tries to chase the player
+    """
+
+    def update(self) -> None:
+        # Move towards the player
+        player = self.game.player
+        dx = 0
+        dy = 0
+        if self.x < player.x:
+            dx = 1
+        elif self.x > player.x:
+            dx = -1
+        if self.y < player.y:
+            dy = 1
+        elif self.y > player.y:
+            dy = -1
+        self.x += dx
+        self.y += dy
+
+
+class FencingEnemy(Enemy):
+    """
+    Enemy that walks around the home in a square-like pattern
+    """
+
+    def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
+        super().__init__(game, size, color)
+        self.__direction = 'right'
+        self.__steps = 0
+
+    def update(self) -> None:
+        # Move around the home in a square-like pattern
+        if self.__steps == 0:
+            if self.__direction == 'right':
+                self.x += 10
+                if self.x > self.game.screen_width - 50:
+                    self.__direction = 'down'
+            elif self.__direction == 'down':
+                self.y += 10
+                if self.y > self.game.screen_height - 50:
+                    self.__direction = 'left'
+            elif self.__direction == 'left':
+                self.x -= 10
+                if self.x < 50:
+                    self.__direction = 'up'
+            elif self.__direction == 'up':
+                self.y -= 10
+                if self.y < 50:
+                    self.__direction = 'right'
+            self.__steps = 10
+        else:
+            self.__steps -= 1
+
+
+class CustomEnemy(Enemy):
+    """
+    Custom enemy class
+    """
+
+    def update(self) -> None:
+        # Custom update logic for the custom enemy
+        pass  # Add your custom update logic here
