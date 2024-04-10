@@ -404,14 +404,20 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
                                 font=font,
                                 fill="red")
 
+
 class RandomWalkEnemy(Enemy):
     """
     Enemy that moves randomly on the screen
     """
 
+    def __init__(self, game: "TurtleAdventureGame", size: int, color: str = None):
+        super().__init__(game, size, color)
+        # Generate a random color for this enemy
+        self.__color = "#{:06x}".format(random.randint(0, 0xFFFFFF))
+
     def create(self) -> None:
         # Create the enemy visualization
-        self.__id = self.canvas.create_rectangle(0, 0, 0, 0, outline="blue", width=2)
+        self.__id = self.canvas.create_oval(0, 0, 0, 0, outline="", width=0)
 
     def delete(self) -> None:
         # Delete the enemy visualization
@@ -425,8 +431,11 @@ class RandomWalkEnemy(Enemy):
         self.y += dy
 
     def render(self) -> None:
-        # Render the enemy visualization
-        self.canvas.coords(self.__id, self.x - self.size/2, self.y - self.size/2, self.x + self.size/2, self.y + self.size/2)
+        # Render the enemy visualization with the random color
+        self.canvas.itemconfig(self.__id, outline=self.__color, fill=self.__color)
+        # Adjust the size to make sure it's a circle
+        radius = self.size / 2
+        self.canvas.coords(self.__id, self.x - radius, self.y - radius, self.x + radius, self.y + radius)
 
 
 class ChasingEnemy(Enemy):
